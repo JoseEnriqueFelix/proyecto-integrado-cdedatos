@@ -1,0 +1,15 @@
+
+Alumno (causa_salida): 
+1 cursando 
+2 baja temp 
+3 baja por especial 
+4 baja definitiva 
+5 egresado 
+
+Calificaciones
+1 calif ordinaria 
+2 calif en recuperación en curso ordinario 
+3 calif en extraordinario en curso ordinario 
+4 calificación ordinaria de rc 
+5 calif en recuperación de rc 
+6 calif en extraordinario en rc

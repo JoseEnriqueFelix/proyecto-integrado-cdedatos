@@ -1,0 +1,446 @@
+Como instalar y configurar un servidor DNS tipo Forwarder en Linux:
+-------------------------------------------------------------------
+
+1. # apt install bind9 bind9utils bind9-doc -y
+
+2. # cd /etc/bind
+
+3. # nano named.conf.options
+
+	forwarders {
+	   8.8.8.8;
+	   8.8.4.4;
+	};
+
+4. # nano named.conf.local
+
+	logging {
+	   channel query.log {
+	      file "/var/log/named/query.log";
+	      severity debug 3;
+	   };
+	   category queries { query.log; };
+	};
+
+5. # cd /var/log
+
+6. # mkdir named
+
+7. # chown bind:bind named
+
+8. # systemctl restart bind9.service
+   # service bind9 restart
+   # systemctl status bind9.service
+
+9. # more /var/log/named/query.log
+
+
+Como instalar y configurar un servidor DNS tipo Caché en Linux:
+---------------------------------------------------------------
+
+1. # apt install bind9 -y
+
+2. # cd /etc/bind
+
+3. # nano named.conf
+
+   ** Verificar los archivos de configuracion, quiza
+      no se necesite el paso 3 y 4
+
+	Agregar al final:
+
+	zone "." {
+	    type hint;
+	    file "/etc/bind/db.root";
+	}
+
+4. Crear el arvhivo /etc/bind/db.root
+
+   # nano db.root
+
+	.			IN	NS	a.root-servers.net.
+	a.root-servers.net.	IN	A	198.41.0.4
+	(Son 13 servidores root, de la 'a' a la 'm')
+
+5. nano named.conf.options
+
+	Agregar:
+
+	options {
+	    directory "/var/cache/bind";
+	    recursion yes;                      *  Quiza solo se requieran
+	    allow-query { any; };               *  estas dos lineas
+	};
+
+6. # cd /var/cache
+
+7. # mkdir bind                                  * Crearlo si no existe
+
+8. # chown bind:bind bind
+
+9. # systemctl restart bind9.service
+   # service bind9 restart
+
+10. # grep query-soure /var/log/syslog
+
+11. # rndc dumpdb -cache                 * Escribe en un archivo el cache
+                                           que está en RAM
+12. # cd /var/cache/bind
+
+13. # more named_dump.db                 * Este es el archivo del paso 11
+
+
+Instalar el servicio Telnet (TCP/23)
+------------------------------------
+
+1. # apt install telnetd -y
+
+2. # systemctl status inetd
+
+3. Para conectarse al servidor se usará un cliente Telnet(telnet, Putty, etc)
+
+
+Instalar el servicio SSH (TCP/22)
+---------------------------------
+
+1. # apt install openssh-server
+
+2. # systemctl status sshd
+
+3. Para conectarse al servidor se usará un cliente SSH (ssh, Putty, etc)
+
+Instalar el servicio FTP (TCP/21)
+---------------------------------
+
+1. # apt install vsftpd
+
+2. # nano /etc/vsftpd.conf
+
+	Quitar comentario a la linea 31
+
+	write_enable=YES
+
+3. # systemctl restart vsftpd.service
+
+4. Para conectarse al servidor se usará un cliente FTP (ftp, FileZilla, etc)
+
+
+Usar FTP sobre SSH
+------------------
+
+Si ya se tiene instalado el servidor OpenSSH se puede usar un cliente FTP que
+use a OpenSSH como servidor del FTP seguro.
+
+# sftp usuario@servidor
+
+El cliente FTP FileZilla incluye el servicio FTP sobre SSH, solo debe seleccionarse
+al momento de la conexión.
+
+
+Instalar TFTP (Trivial File Transfer Protocol)
+----------------------------------------------
+
+1. # apt install tftpd-hpa
+
+2. # nano /etc/default/tftpd-hpa
+
+   Modificar la linea
+
+   TFTP_OPTIONS="--secure"
+
+   Por
+
+   TFTP_OPTIONS="--secure --create --ipv4"
+
+3. # systemctl restart tftpd-hpa
+
+4. El directorio default para el almacenamiento de archivos es: /srv/tftp
+
+   Cambiar el dueño de ese directorio
+
+   # chown tftp:tftp /srv/tftp
+
+El servicio TFTP es muy util para actualizar la imagen del sistema opertativo
+de switches y ruteadores Cisco y de otras marcas.
+
+Ademas se puede usar para guardar copias de los archivos de configuracion de los
+switches y ruteadores.
+
+
+Actualizar el Sistema Operativo de un switch o ruteador Cisco:
+--------------------------------------------------------------
+
+# copy tftp: flash:
+Address or name of remote host [] ? 192.168.1.14
+Source filename [] ? xxxxxxxxxxxxxxx
+Destination filename [xxxxxxxxxxxxxxx] ?
+
+accessing tftp://192.168.1.14/xxxxxxxxxxxxxx....
+Loading xxxxxxxxxxxxx from 192.168.1.14:
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[OK - nnnnnnn bytes]
+
+Respaldar la imagen del Sistema Operativo
+-----------------------------------------
+
+# copy flash: tftp:
+
+
+Respaldar la configuracion de un switch o ruteador Cisco:
+---------------------------------------------------------
+
+# copy running-config tftp:
+
+
+Recuperar una configuracion de un switch o ruteador Cisco:
+----------------------------------------------------------
+
+# copy tftp: running-config
+
+
+Instalar Servidor HTTP (TCP/80)
+-------------------------------
+
+# apt install apache2
+
+
+Instalar Servidor MySQL (TCP/3306)
+----------------------------------
+
+# apt install mysql-server
+
+# mysql -u root -p
+
+  mysql> CREATE USER 'usuario'@'localhost' IDENTIFIED BY 'password';
+  mysql> GRANT ALL PRIVILEGES ON database.table TO 'usuario'@'localhost';
+  mysql> GRANT ALL PRIVILEGES ON *.* TO 'usuario'@'localhost';
+  mysql> FLUSH PRIVILEGES;
+
+
+Instalar PHP sobre Apache
+-------------------------
+
+# apt install php libapache2-mod-php php-mysql
+
+# systemctl restart apache2
+
+Crear un archivo para verificar la instalacion de PHP
+
+# nano /var/www/html/t.php
+
+  <?php
+     phpinfo();
+  ?>
+
+Desde un Navegador de Internet entrar a: http://192.168.1.12/t.php
+
+
+Instalar PHPMyAdmin (Aplicacion en PHP para administrar MySQL Server)
+---------------------------------------------------------------------
+
+# apt install phpmyadmin
+
+Desde un Navegador de Internet entrar a: http://192.168.1.12/phpmyadmin
+
+
+Activar SSL en Apache2 (HTTPS TCP/443)
+--------------------------------------
+
+# a2enmod ssl
+
+# systemctl restart apache2
+
+# openssl req -x509 -nodes -days 365 -newkey rsa:2048
+  -keyout /etc/ssl/private/apache-selfsigned.key
+  -out /etc/ssl/certs/apache-selfsigned.crt
+
+  Country Name (2 letter code) [AU]: MX
+  State or Province Name (full name) [Some-State]: Sinaloa
+  Locality Name (eg, city) []: Culiacan
+  Organization Name (eg. company) [Internet Widgits Pty Ltd]: ITCuliacan
+  Organization Unit Name (eg, section) []: Sistemas
+  Common Name (e.g. server FQDN or Your Name) []: ejemplo.com.mx
+  Email Address []: admin@ejemplo.com.mx
+
+# cd /etc/apache2/sites-available
+
+# cp 000-default.conf 000-default.conf.original
+
+# nano 000-default.conf
+
+  - Cambiar el puerto 80 por 443
+
+  - Agregar las lineas
+
+	SSLEngine on
+	SSLCertificateFile	/etc/ssl/certs/apache-selfsigned.crt
+	SSLCertificateKeyFile	/etc/ssl/private/apache-selfsigned.key
+
+# systemctl restart apache2
+
+**Si se desea se puede redireccionar del puerto 80 al 443
+
+Ejemplo del archivo: 000-default.conf
+-------------------------------------
+
+VirtualHost *:80>
+        ServerName ejemplo.com.mx
+
+        ServerAdmin admin@ejemplo.com.mx
+        DocumentRoot /var/www/html
+
+#       Redirect / https://192.168.1.12/
+
+</VirtualHost>
+
+<VirtualHost *:443>
+
+        ServerName ejemplo.com.mx
+
+        ServerAdmin admin@ejemplo.com.mx
+        DocumentRoot /var/www/html
+
+        SSLEngine on
+        SSLCertificateFile      /etc/ssl/certs/apache-selfsigned.crt
+        SSLCertificateKeyFile   /etc/ssl/private/apache-selfsigned.key
+
+        ErrorLog ${APACHE_LOG_DIR}/error.log
+        CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+</VirtualHost>
+
+
+Certificados firmados por Empresas Reconocidas en Internet
+----------------------------------------------------------
+
+En Internet hay varias opciones de Certificados reconocidos para HTTPS.
+
+Hay opciones de certificados pagados por un tiempo determinado, los usan
+empresas que se dedican principalmente al comercio electronico.
+
+Tambien hay certificados otorgados en forma gratuita por instituciones
+reconocidas. Ejemplo: LetsEncrypt, muy usada por universidades e
+instituciones sin fines de lucro.
+
+Obtener Certificado SSL para HTTPS en LetsEncrypt
+-------------------------------------------------
+
+** Requisitos:
+1. El servidor Web debe estar registrado en un servidor de dominio DNS
+2. Se debe contar con una direccion de correo electronico valida
+3. Se debe haber configurado HTTPS previamente
+4. Se debe detener temporalmente el servicio Web
+
+# apt install certbot
+
+# systemctl stop apache2
+
+# certbot certonly --standalone -d eclopez.ddns.net
+
+  (Se piden varios datos)
+
+  Si no hay errores, se generan los dos archivos:
+  'fullchain.pem' -> Certificado y 'privkey.pem' -> Llave Privada
+  en el directorio /etc/letsencrypt/live/eclopez.ddns.net
+
+# nano /etc/apache2/sites-available/000-default.conf
+
+  Cambiar estas lineas (para dejar de usar certificado autofirmado):
+
+	SSLEngine on
+	SSLCertificateFile	/etc/ssl/certs/apache-selfsigned.crt
+	SSLCertificateKeyFile	/etc/ssl/private/apache-selfsigned.key
+
+  Por estas lineas (para usar el certificado de LetsEncrypt):
+
+	SSLEngine on
+	SSLCertificateFile	/etc/letsencrypt/live/eclopez.ddns.net/fullchain.pem
+	SSLCertificateKeyFile	/etc/letsencrypt/live/eclopez.ddns.net/privkey.pem
+
+# systemctl start apache2
+
+Verificar desde un Navegador de Internet: https://eclopez.ddns.net
+
+Verificar que se usó HTTPS en lugar de HTTP
+
+Verificar el Certificado SSL
+
+
+Servicio SMB (samba) -> Compartir Carpetas y Archivos estilo Windows
+--------------------------------------------------------------------
+
+# apt install samba samba-common-bin
+
+# smbd --version
+
+# mkdir /home/usuario/shared
+
+# chown usuario:usuario /home/usuario/shared     -> Asegurarse de los permisos
+
+# nano /etc/samba/smb.conf
+
+  - Agregar al final del archivo
+
+[shared]
+   path = /home/usuario/shared
+   available = yes
+   valid users = usuario
+   read only = no
+   browsable = yes
+   public = yes
+   writable = yes
+
+
+# smbpasswd -a usuario         -> Crear un usuario y password Samba
+
+# systemctl restart smbd
+# systemctl restart nmbd
+
+Desde Windows, en el Explorador de Archivos:
+
+\\<IP>\shared
+
+Proporciona: usuario y password creado para Samba
+
+Desde el Explorador de Archivos se tiene acceso a la carpeta compartida
+en forma compatible con las carpetas compartidas por Windows.
+
+Este servicio, desde el punto de vista del Cliente (normalmente Windows),
+hace que los archivos se vean desde el nivel del Sistema Operativo.
+
+
+Si se desea una carpeta compartida sin usuario ni password (carpeta publica):
+-----------------------------------------------------------------------------
+
+# mkdir /srv/samba/publico
+
+# chown nobody:nogroup /srv/samba/publico
+
+# chmod 777 /srv/samba/publico
+
+Agregar al final en el archivo /etc/samba/smb.conf
+
+[publico]
+   path = /srv/samba/publico
+   read only = no
+   browsable = yes
+   create mask = 777
+   guest ok = yes
+   writable = yes
+
+# systemctl restart smbd
+# systemctl restart nmbd
+
+En Windows, en la ventana de CMD, usar el comando:
+
+c:\> net use x: \\<IP>\publico /user:"" ""
+
+En el Explorador de Archivos de Windows:
+
+\\<IP>\publico
+
+Se creará un disco virtual X: apuntando al directorio
+compartido en Samba de Linux
